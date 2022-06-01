@@ -67,6 +67,29 @@ setMethod(
   }
 )
 
+#' @describeIn single_call_estimation Equilibrium model
+#' @export
+setGeneric(
+  "equilibrium_model",
+  function(specification, data,
+           correlated_shocks = TRUE, verbose = 0,
+           estimation_options = list()) {
+    standardGeneric("equilibrium_model")
+  }
+)
+
+#' @rdname single_call_estimation
+setMethod(
+  "equilibrium_model", signature(specification = "formula"),
+  function(specification, data, correlated_shocks, verbose,
+           estimation_options) {
+    initialize_from_formula(
+      "equilibrium_model", specification, data, correlated_shocks, verbose,
+      estimation_options
+    )
+  }
+)
+
 #' @rdname minus_log_likelihood
 setMethod(
   "minus_log_likelihood", signature(object = "equilibrium_model"),
@@ -100,13 +123,21 @@ setMethod(
 #' @rdname maximize_log_likelihood
 setMethod(
   "maximize_log_likelihood", signature(object = "equilibrium_model"),
-  function(object, start, step, objective_tolerance, gradient_tolerance) {
+  function(object, start, step, objective_tolerance, gradient_tolerance,
+           max_it) {
     start <- prepare_initializing_values(object, NULL)
 
     cpp_model <- new(cpp_equilibrium_model, object@system)
     cpp_model$minimize(
       start, step, objective_tolerance,
-      gradient_tolerance
+      gradient_tolerance, max_it
     )
+  }
+)
+
+setMethod(
+  "calculate_initializing_values", signature(object = "equilibrium_model"),
+  function(object) {
+    coef(estimate(object, method = "2SLS"))
   }
 )

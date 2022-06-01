@@ -1,46 +1,14 @@
-# Changes in version 0.3.1
+# Changes in version 0.4.6
 
-* Added software package article in vignettes.
-* Bug fixes in `show` and `summary` methods of `diseq_stochastic_adjustment`. Fixed bug in calculation of clustered standard errors.
-* Changes in model simulation.
- - Simplified simulation calls (changes the user space).
- - Re-factored simulation code and exported additional functions. 
-* Added marginal system effect methods, and unified marginal probabilities effects methods (changes the user space). Added `prefixed_quantity_variable` method.
-* Improvements in documentation. Added class implementation figure.
+* Added deprecation messages in documentation and on package attaching.
 
-
-# Test environments 
+# Test Environments and Results (version 1.0.1)
 ## Windows
-1. (R-devel win-builder.r-project.org) x86_64-w64-mingw32 (64-bit), R version 4.1.0 beta (2021-05-06 r80268)
-2. (R-oldrelease win-builder.r-project.org) x86_64-w64-mingw32 (64-bit), R version 3.6.3 (2020-02-29)
-3. (R-release win-builder.r-project.org) x86_64-w64-mingw32 (64-bit), R version 4.0.5 (2021-03-31)
-4. (rhub windows-x86_64-devel) Windows Server 2008 R2 SP1, R-devel, 32/64 bit, R Under development (unstable) (2021-04-15 r80175) 
-
-## Linux
-
-### GCC
-5. (rhub x86_64-pc-linux-gnu) Ubuntu Linux 20.04.1 LTS, R-release, GCC, R version 4.0.5 (2021-03-31) -- "Shake and Throw"
-6. (rhub debian-gcc-devel) Debian Linux, R-devel, GCC, R Under development (unstable) (2021-05-10 r80282) -- "Unsuffered Consequences"
-7. (rhub debian-gcc-devel-nold) Debian Linux, R-devel, GCC, no long double, R Under development (unstable) (2021-05-10 r80282) -- "Unsuffered Consequences"
-8. (rhub rocker-gcc-san) Debian Linux, R-devel, GCC ASAN/UBSAN, R Under development (unstable) (2020-07-31 r78945) -- "Unsuffered Consequences"
-9. (local) Fedora 34 (Workstation Edition), GCC 11.1.1, R version 4.0.4 (2021-02-15) -- "Lost Library Book"
-
-### LLVM
-10. (rhub debian-clang-devel) Debian Linux, R-devel, clang, ISO-8859-15 locale, R Under development (unstable) (2021-05-10 r80282) -- "Unsuffered Consequences"
-11. (rhub fedora-clang-devel) Fedora Linux, R-devel, clang, gfortran, R Under development (unstable) (2021-05-10 r80282) -- "Unsuffered Consequences"
-
-## Solaris
-12. (rhub solaris-x86-patched) Oracle Solaris 10, x86, 32 bit, R-release, R version 4.0.5 (2021-03-31)
-
-## Macos
-13. (rhub macos-highsierra-release-cran) macOS 10.13.6 High Sierra, R-release, CRAN's setup, R version 4.0.5 (2021-03-31)
-14. (rhub macos-highsierra-release) macOS 10.13.6 High Sierra, R-release, brew, R version 4.0.5 (2021-03-31)
-
-# Check results
-## R CMD check results in (1) -- std=gnu++11, with GSL, no execution header -- 1 Note
-Installation time in seconds: 87
-Check time in seconds: 263
+### (1) R-devel win-builder.r-project.org -- 1 NOTE
+Installation time in seconds: 56
+Check time in seconds: 277
 Status: 1 NOTE
+R Under development (unstable) (2022-05-31 r82437 ucrt)
 
 * checking CRAN incoming feasibility ... NOTE
 Maintainer: 'Pantelis Karapanagiotis <pikappa.devel@gmail.com>'
@@ -69,40 +37,13 @@ Found the following (possibly) invalid DOIs:
     Status: Forbidden
     Message: 403
 
-Log: https://win-builder.r-project.org/T9StB2o1FHoI/
+Results: https://win-builder.r-project.org/T9XfoCLFpQMP/
 
-## R CMD check results in (2) -- std=gnu++11, with GSL, no execution header -- 1 Note
-Installation time in seconds: 80
-Check time in seconds: 247
+### (2) R-oldrelease win-builder.r-project.org -- 1 NOTE
+Installation time in seconds: 159
+Check time in seconds: 602
 Status: 1 NOTE
-
-* checking CRAN incoming feasibility ... NOTE
-Maintainer: 'Pantelis Karapanagiotis <pikappa.devel@gmail.com>'
-
-Found the following (possibly) invalid URLs:
-  URL: https://doi.org/10.2307/1913181
-    From: man/houses.Rd
-    Status: 426
-    Message: Upgrade Required
-  URL: https://doi.org/10.2307/1914215
-    From: man/diseq.Rd
-          man/houses.Rd
-          man/minus_log_likelihood.Rd
-    Status: 426
-    Message: Upgrade Required
-
-Found the following (possibly) invalid DOIs:
-  DOI: 10.2307/1914215
-    From: DESCRIPTION
-    Status: Upgrade Required
-    Message: 426
-
-Log: https://win-builder.r-project.org/jBu5Ix60nG4g/
-
-## R CMD check results in (3) -- std=gnu++11, with GSL, no execution header -- 1 Note
-Installation time in seconds: 91
-Check time in seconds: 268
-Status: 1 NOTE
+R version 4.1.3 (2022-03-10)
 
 * checking CRAN incoming feasibility ... NOTE
 Maintainer: 'Pantelis Karapanagiotis <pikappa.devel@gmail.com>'
@@ -131,170 +72,187 @@ Found the following (possibly) invalid DOIs:
     Status: Forbidden
     Message: 403
 
-Log: https://win-builder.r-project.org/cbOsMOYVHldr/
+Results: https://win-builder.r-project.org/eD93qKX5o3TP/
 
-## R CMD check results in (4) -- std=gnu++11, with GSL, no execution header -- 2 Notes
-Build time:	27 minutes 1.3 seconds
-
-NOTES:
-* checking for future file timestamps ... NOTE
-unable to verify current time
-* checking sizes of PDF files under 'inst/doc' ... NOTE
-Unable to find GhostScript executable to run checks on size reduction
-
-Log: https://builder.r-hub.io/status/original/diseq_0.3.1.tar.gz-700bcdb3e02a464fb2cd29a8b23ffa1f
-
-## R CMD check results in (5) -- std=gnu++11, with GSL, no execution header -- 1 Note
-Build time:	24 minutes 39.7 seconds
-
+### (3) R-release win-builder.r-project.org -- 1 NOTE
+Installation time in seconds: 62
+Check time in seconds: 281
 Status: 1 NOTE
+R version 4.2.0 (2022-04-22 ucrt)
+
+* checking CRAN incoming feasibility ... NOTE
+Maintainer: 'Pantelis Karapanagiotis <pikappa.devel@gmail.com>'
+
+Found the following (possibly) invalid URLs:
+  URL: https://doi.org/10.2307/1913181
+    From: README.md
+    Status: 403
+    Message: Forbidden
+  URL: https://doi.org/10.2307/2526311
+    From: README.md
+    Status: 403
+    Message: Forbidden
+
+Found the following (possibly) invalid DOIs:
+  DOI: 10.2307/1914215
+    From: DESCRIPTION
+    Status: Forbidden
+    Message: 403
+	
+Results: https://win-builder.r-project.org/DLf5wY0Mmkv4/
+
+### (4) rhub windows-x86_64-devel -- OK
+Build ID:	diseq_0.4.6.tar.gz-dba7cbab20234dbbad900e5a89f216ee
+Platform:	Windows Server 2022, R-devel, 64 bit
+Submitted:	9 minutes 44.4 seconds ago
+Build time:	9 minutes 39.6 seconds
+
+See the full build log: https://artifacts.r-hub.io/diseq_0.4.6.tar.gz-dba7cbab20234dbbad900e5a89f216ee/
+
+## Linux, GCC
+### (5) rhub ubuntu-gcc-release -- 1 NOTE
+Build ID:	diseq_0.4.6.tar.gz-2bb85047903c4d0ab5d1f329c44b8dc2
+Platform:	Ubuntu Linux 20.04.1 LTS, R-release, GCC
+Submitted:	33 minutes 52.8 seconds ago
+Build time:	33 minutes 48.3 seconds
 
 * checking installed package size ... NOTE
-  installed size is  5.8Mb
+  installed size is  6.1Mb
   sub-directories of 1Mb or more:
+    doc    1.0Mb
     libs   3.4Mb
 
-Log: https://builder.r-hub.io/status/original/diseq_0.3.1.tar.gz-1a166711aee442a6a526113a757b8375
+See the full build log: https://artifacts.r-hub.io/diseq_0.4.6.tar.gz-2bb85047903c4d0ab5d1f329c44b8dc2/diseq.Rcheck/00check.log
 
-## R CMD check results in (6) -- std=c++17, with GSL, with execution header -- Ok
-Build time:	23 minutes 39.5 seconds
 
-Log: https://builder.r-hub.io/status/original/diseq_0.3.1.tar.gz-2c5514f365fb4534a5ed1f8ee8278b47
+### (6) rhub debian-gcc-devel -- OK
+Build ID:	diseq_0.4.6.tar.gz-7b670e8c7c2c488694d7f6ae8be6a679
+Platform:	Debian Linux, R-devel, GCC
+Submitted:	37 minutes 48.1 seconds ago
+Build time:	37 minutes 42.9 seconds
 
-## R CMD check results in (7) -- std=c++17, with GSL, with execution header -- Ok
-Build time:	25 minutes 21.4 seconds
+See the full build log: https://builder.r-hub.io/status/original/diseq_0.4.6.tar.gz-7b670e8c7c2c488694d7f6ae8be6a679
 
-Log: https://builder.r-hub.io/status/original/diseq_0.3.1.tar.gz-132b8fc3902d447a9640ba11f5b9266f
+### (7) rhub debian-gcc-devel-nold -- OK
+Build ID:	diseq_0.4.6.tar.gz-9cc8f6aef50643c38cf1b83c290fcd22
+Platform:	Debian Linux, R-devel, GCC, no long double
+Submitted:	37 minutes 50.3 seconds ago
+Build time:	37 minutes 45.6 seconds
 
-## R CMD check results in (8) -- std=c++17, with GSL, with execution header -- Ok
-Build time:	47 minutes 6.7 seconds
+See the full build log: https://builder.r-hub.io/status/original/diseq_0.4.6.tar.gz-9cc8f6aef50643c38cf1b83c290fcd22
 
-Log: https://builder.r-hub.io/status/original/diseq_0.3.1.tar.gz-cca359d508164507aa6c204d90bdcb59
+### (8) rhub rocker-gcc-san -- PREPERROR
+Build ID:	diseq_0.4.6.tar.gz-89ee68bbb670404facd1ce2f1f982bc3
+Platform:	Debian Linux, R-devel, GCC ASAN/UBSAN
+Submitted:	53 minutes 38.8 seconds ago
+Build time:	53 minutes 34.7 seconds
 
-## R CMD check results in (9) -- std=c++17, with GSL, with execution header -- 1 Note
-── R CMD check results ──────────────────────────────────────── diseq 0.3.1 ────
-Duration: 7m 10.5s
+Error : Bioconductor does not yet build and check packages for R version 4.3; see
+  https://bioconductor.org/install
+ERROR: dependency ‘systemfit’ is not available for package ‘diseq’
+* removing ‘/home/docker/R/diseq’
+Warning messages:
+1: In i.p(...) : installation of package ‘lme4’ had non-zero exit status
+2: In i.p(...) :
+  installation of package ‘pbkrtest’ had non-zero exit status
+3: In i.p(...) : installation of package ‘car’ had non-zero exit status
+4: In i.p(...) :
+  installation of package ‘systemfit’ had non-zero exit status
+5: In i.p(...) :
+  installation of package ‘/tmp/Rtmp03F3vy/file1337e17e1eb/diseq_0.4.4.tar.gz’ had non-zero exit status
+> 
+> 
+Error : Bioconductor does not yet build and check packages for R version 4.3; see
+  https://bioconductor.org/install
+  
+See the full build log: https://builder.r-hub.io/status/original/diseq_0.4.6.tar.gz-89ee68bbb670404facd1ce2f1f982bc3
 
-❯ checking compilation flags used ... NOTE
-  Compilation used the following non-portable flag(s):
-    ‘-Werror=format-security’ ‘-Wp,-D_FORTIFY_SOURCE=2’
-    ‘-Wp,-D_GLIBCXX_ASSERTIONS’
+### (9) Local (Ubuntu 20.04.3 LTS in WSL2 under Windows 11) -- 1 NOTE
+── R CMD check results ──────────────────────────────────────────── diseq 0.4.6 ────
+Duration: 2m 28.1s
+
+❯ checking installed package size ... NOTE
+    installed size is  6.7Mb
+    sub-directories of 1Mb or more:
+      doc    1.0Mb
+      libs   4.0Mb
 
 0 errors ✔ | 0 warnings ✔ | 1 note ✖
 
-## R CMD check results in (10) -- std=c++17, with GSL, with execution header -- Ok
-Build time:	30 minutes 55.6 seconds
+## Linux, LLVM
+### (10) rhub debian-clang-devel -- OK
+Build ID:	diseq_0.4.6.tar.gz-1074f7001f3b43dbb2522dc3d346c141
+Platform:	Debian Linux, R-devel, clang, ISO-8859-15 locale
+Submitted:	42 minutes 4.8 seconds ago
+Build time:	42 minutes 3.2 seconds
 
-Log: https://builder.r-hub.io/status/original/diseq_0.3.1.tar.gz-af69542397154418a1085a2ebb29b86e
+See the full build log: https://artifacts.r-hub.io/diseq_0.4.6.tar.gz-1074f7001f3b43dbb2522dc3d346c141/
 
-## R CMD check results in (11) -- std=c++17, with GSL, with execution header -- Ok
-Build time:	25 minutes 37.8 seconds
+### (11) rhub fedora-clang-devel -- OK
+Build ID:	diseq_0.4.6.tar.gz-f03b2239065a4073a805ac741ace8ab6
+Platform:	Fedora Linux, R-devel, clang, gfortran
+Submitted:	34 minutes 13.3 seconds ago
+Build time:	34 minutes 11.1 seconds
 
-Log: https://builder.r-hub.io/status/original/diseq_0.3.1.tar.gz-3fed35835fdd4d3c96050c4ff279df8d
+See the full build log: https://artifacts.r-hub.io/diseq_0.4.6.tar.gz-f03b2239065a4073a805ac741ace8ab6/
 
-## R CMD check results in (12) -- std=gnu++11, with GSL, no execution header -- 1 Warning, 2 Notes
-Build time:	38 minutes 4.8 seconds
 
-WARNINGS:
-* checking top-level files ... WARNING
-  Output from running autoreconf:
-  /opt/csw/share/aclocal/gtk.m4:7: warning: underquoted definition of AM_PATH_GTK
-  /opt/csw/share/aclocal/gtk.m4:7:   run info Automake 'Extending aclocal'
-  /opt/csw/share/aclocal/gtk.m4:7:   or see https://www.gnu.org/software/automake/manual/automake.html#Extending-aclocal
-A complete check needs the 'checkbashisms' script.
-See section ‘Configure and cleanup’ in the ‘Writing R Extensions’
-manual.
-Files ‘README.md’ or ‘NEWS.md’ cannot be checked without ‘pandoc’ being installed.
+## Solaris
+### (12) rhub solaris-x86-patched -- PREPERROR
+Build ID:	diseq_0.4.5.tar.gz-837f52265dcb4589a4c89ac94bffe25c
+Platform:	Oracle Solaris 10, x86, 32 bit, R-release
+Submitted:	31 minutes 17.1 seconds ago
+Build time:	30 minutes 40.1 seconds
 
-NOTES:
-* checking CRAN incoming feasibility ... NOTE
-Maintainer: ‘Pantelis Karapanagiotis <pikappa.devel@gmail.com>’
+ERROR: package installation failed
+STDERR:
 
-Found the following (possibly) invalid URLs:
-  URL: https://doi.org/10.2307/1913181
-    From: man/houses.Rd
-    Status: 403
-    Message: Forbidden
-  URL: https://doi.org/10.2307/1914215
-    From: man/diseq.Rd
-          man/houses.Rd
-          man/minus_log_likelihood.Rd
-    Status: 403
-    Message: Forbidden
+Error: Failed to install 'diseq' from local:
+  Failed to `R CMD build` package, try `build = FALSE`.
+In addition: Warning messages:
+1: In i.p(...) : installation of package ‘ps’ had non-zero exit status
+2: In i.p(...) :
+  installation of package ‘processx’ had non-zero exit status
+3: In i.p(...) : installation of package ‘callr’ had non-zero exit status
+4: In i.p(...) :
+  installation of package ‘testthat’ had non-zero exit status
+5: In i.p(...) : installation of package ‘nloptr’ had non-zero exit status
+6: In i.p(...) : installation of package ‘lme4’ had non-zero exit status
+7: In i.p(...) :
+  installation of package ‘pbkrtest’ had non-zero exit status
+8: In i.p(...) : installation of package ‘car’ had non-zero exit status
+9: In i.p(...) :
+  installation of package ‘systemfit’ had non-zero exit status
+Execution halted
 
-Found the following (possibly) invalid DOIs:
-  DOI: 10.2307/1914215
-    From: DESCRIPTION
-    Status: Forbidden
-    Message: 403
+See the full build log: https://builder.r-hub.io/status/original/diseq_0.4.6.tar.gz-9b3b13c5e97f461e884afcf1ccd464ff
 
-* checking compilation flags used ... NOTE
-Compilation used the following non-portable flag(s):
-  ‘-march=pentiumpro’
-  
-Log: https://builder.r-hub.io/status/original/diseq_0.3.1.tar.gz-243eca0d533048b2b6a2e6018035f361
+## Macos
+### (13) rhub macos-highsierra-release-cran -- OK
+Build ID:	diseq_0.4.6.tar.gz-7c0b578eaa4f42f9963098edff973ff9
+Platform:	macOS 10.13.6 High Sierra, R-release, brew
+Submitted:	9 minutes 12.9 seconds ago
+Build time:	9 minutes 10.5 seconds
 
-## R CMD check results in (13) -- std=gnu++11, with GSL, no execution header -- 1 Warning, 1 Note
-Build time:	41 minutes 4.2 seconds
+See the full build log: https://artifacts.r-hub.io/diseq_0.4.6.tar.gz-7c0b578eaa4f42f9963098edff973ff9/
 
-WARNINGS:
-* checking top-level files ... WARNING
-A complete check needs the 'checkbashisms' script.
-See section ‘Configure and cleanup’ in the ‘Writing R Extensions’
-manual.
+### (14) rhub macos-highsierra-release -- OK
+Build ID:	diseq_0.4.6.tar.gz-1d6c17296f7c4e018833cdbff133c46a
+Platform:	macOS 10.13.6 High Sierra, R-release, CRAN's setup
+Submitted:	8 minutes 56.8 seconds ago
+Build time:	8 minutes 53.2 seconds
 
-NOTES:
-* checking CRAN incoming feasibility ... NOTE
-Maintainer: ‘Pantelis Karapanagiotis <pikappa.devel@gmail.com>’
 
-Found the following (possibly) invalid URLs:
-  URL: https://doi.org/10.2307/1913181
-    From: man/houses.Rd
-    Status: 403
-    Message: Forbidden
-  URL: https://doi.org/10.2307/1914215
-    From: man/diseq.Rd
-          man/houses.Rd
-          man/minus_log_likelihood.Rd
-    Status: 403
-    Message: Forbidden
+See the full build log: https://artifacts.r-hub.io/diseq_0.4.6.tar.gz-1d6c17296f7c4e018833cdbff133c46a/
 
-Found the following (possibly) invalid DOIs:
-  DOI: 10.2307/1914215
-    From: DESCRIPTION
-    Status: Forbidden
-    Message: 403
+### (15) Mac mini at https://mac.r-project.org/macbuilder/submit.html -- 1 NOTE
+Build system: r-devel-macosx-arm64|4.2.0|macosx|macOS 11.5.2 (20G95)|Mac mini|Apple M1||en_US.UTF-8
 
-Log: https://builder.r-hub.io/status/original/diseq_0.3.1.tar.gz-458b62284431440e8bce5b8f7b3d8473
 
-## R CMD check results in (14) -- std=gnu++11, with GSL, no execution header -- 1 Warning, 1 Note
-Build time:	16 minutes 45 seconds
+* checking installed package size ... NOTE
+  installed size is  6.4Mb
+  sub-directories of 1Mb or more:
+    doc    1.0Mb
+    libs   3.8Mb
 
-WARNINGS:
-* checking top-level files ... WARNING
-A complete check needs the 'checkbashisms' script.
-See section ‘Configure and cleanup’ in the ‘Writing R Extensions’
-manual.
-NOTES:
-* checking CRAN incoming feasibility ... NOTE
-Maintainer: ‘Pantelis Karapanagiotis <pikappa.devel@gmail.com>’
-
-Found the following (possibly) invalid URLs:
-  URL: https://doi.org/10.2307/1913181
-    From: man/houses.Rd
-    Status: 403
-    Message: Forbidden
-  URL: https://doi.org/10.2307/1914215
-    From: man/diseq.Rd
-          man/houses.Rd
-          man/minus_log_likelihood.Rd
-    Status: 403
-    Message: Forbidden
-
-Found the following (possibly) invalid DOIs:
-  DOI: 10.2307/1914215
-    From: DESCRIPTION
-    Status: Forbidden
-    Message: 403
-
-Log: https://builder.r-hub.io/status/original/diseq_0.3.1.tar.gz-2156934ce34b494ea8e50e307c6d557e
+Results: https://mac.r-project.org/macbuilder/results/1654099213-e4124ab438dc9dcf/

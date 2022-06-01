@@ -1,5 +1,6 @@
 #' @include equation_stochastic_adjustment.R
 #' @include system_base.R
+#' @importFrom stats terms
 
 #' @describeIn system_classes Stochastic adjustment model's system class
 #' @slot price_equation Price equation.
@@ -132,13 +133,13 @@ setMethod(
       "Price Dynamics", "P_"
     )
     # The standard equation initialization correctly creates the control matrix
-    # needed in the models' calculations. We only need to adjust the formula for the
-    # `show` and `summary` functions.
+    # needed in the models' calculations. We only need to adjust the formula
+    # for the `show` and `summary` functions.
     .Object@price_equation@formula <- Formula(formula(paste0(
       price_differences_variable(.Object), " ~ (",
       prefixed_quantity_variable(.Object@demand), " - ",
       prefixed_quantity_variable(.Object@supply), ") + ",
-      terms(specification, lhs = 0, rhs = 3)[[2]]
+      deparse(terms(specification, lhs = 0, rhs = 3)[[2]])
     )))
 
     .Object@lagged_price_vector <- as.matrix(data[, lagged_price_variable(.Object)])

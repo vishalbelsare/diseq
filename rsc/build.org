@@ -9,6 +9,12 @@ rm configure && autoreconf && Rscript -e "devtools::clean_dll(); devtools::docum
 tools::compactPDF("./vignettes/diseq_package.pdf", gs_quality = "ebook")
 #+end_src
 
+** Tests
+#+begin_src R :dir .. :results output :async
+devtools::test()
+devtools::run_examples(run_dontrun = TRUE, run_donttest = TRUE)
+#+end_src
+
 ** Make documentation
 
 #+begin_src R :dir .. :results output :async
@@ -18,18 +24,6 @@ pkgdown::build_site(lazy = FALSE)
 
 rmarkdown::render('README.Rmd', output_format = 'github_document')
 document <- paste(readLines('README.md'), collapse = "\n")
-document <- gsub("\\\\tag.+\\\\label.+?\\}", "", document)
-document <- gsub("\\\\\\[\\n", 
-		"<img src='https://render.githubusercontent.com/render/math?math=" ,
-		document)
-document <- gsub("\\n\\\\]", "'/>", document)
-matches <- gregexpr("\\\\begin\\{equation\\}.+?\\\\end\\{equation\\}", document)
-regmatches(document, matches) <- list(lapply(
-  regmatches(document, matches)[[1]], 
-  function(x) { 
-    x <- gsub("\\\\begin\\{equation\\}[[:space:]](.+?)[[:space:]]\\\\end\\{equation\\}", "\\1", x)
-    URLencode(x, TRUE)
-  }))
 document <- gsub("<iframe.+?iframe>", '<a style="display:block;margin:auto" href="https://www.youtube.com/watch?v=Kkjkny94dgU" target="_blank"><img src="http://img.youtube.com/vi/Kkjkny94dgU/0.jpg"  alt="Session Recording" width="560" height="315" border="10" /></a>', document)
 writeLines(document, 'README.md')
 
@@ -48,34 +42,50 @@ devtools::check_win_devel()
 devtools::check_win_release()
 #+end_src
 
-*** Preconfigured devtools platforms
-#+begin_src R :dir .. :results output :async
-devtools::check_rhub(env_vars=c(R_COMPILE_AND_INSTALL_PACKAGES = 'always'))
-#+end_src
-
 *** Platforms using clang
 #+begin_src R :dir .. :async
-devtools::check_rhub(
-  platforms = c('debian-clang-devel', 'fedora-clang-devel'), 
+rhub::check(
+  platform = c('debian-clang-devel', 'fedora-clang-devel'), 
   env_vars=c(R_COMPILE_AND_INSTALL_PACKAGES = 'always'))
 #+end_src
 
 *** Solaris platforms
 #+begin_src R :dir .. :async
-devtools::check_rhub(
-  platforms = c('solaris-x86-patched', 'solaris-x86-patched-ods'), 
+rhub::check(
+  platform = c('solaris-x86-patched', 'solaris-x86-patched-ods'), 
   env_vars=c(R_COMPILE_AND_INSTALL_PACKAGES = 'always'))
 #+end_src
 
 *** Mac platforms
 #+begin_src R :dir .. :async
-devtools::check_rhub(
-  platforms = c('macos-highsierra-release', 'macos-highsierra-release-cran'), 
+rhub::check(
+  platform = c('macos-highsierra-release', 'macos-highsierra-release-cran'), 
   env_vars=c(R_COMPILE_AND_INSTALL_PACKAGES = 'always'))
+# There is a testing service for the CRAN M1mac setup at
+# https://mac.r-project.org/macbuilder/submit.html
 #+end_src
+
+#+RESULTS:
 
 *** Platforms without long double
 #+begin_src R :dir .. :async
-devtools::check_rhub(platforms = c('debian-gcc-devel-nold'))
+rhub::check(platform = c('debian-gcc-devel-nold'))
+#+end_src
+
+*** All
+#+begin_src R :dir .. :results output :async
+rhub::check(
+  platform = c(
+    # Windows platforms
+    'windows-x86_64-devel',
+    # Platforms using gcc
+    'ubuntu-gcc-release', 'debian-gcc-devel', 'debian-gcc-devel-nold', 'linux-x86_64-rocker-gcc-san',
+    # Platforms using clang
+    'debian-clang-devel', 'fedora-clang-devel',
+    # Solaris platforms
+    'solaris-x86-patched', 'solaris-x86-patched-ods',
+    # Mac platforms
+    'macos-highsierra-release', 'macos-highsierra-release-cran'
+  ), env_vars=c(R_COMPILE_AND_INSTALL_PACKAGES = 'always'))
 #+end_src
 

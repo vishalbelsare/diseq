@@ -6,10 +6,10 @@
 #' \subsection{diseq_deterministic_adjustment}{
 #' The disequilibrium model with deterministic price adjustment consists
 #' of four equations. The two market equations, the short side rule and price
-#' evolution equation. The first two equations are stochastic. The price equation is
-#' deterministic. The sample is separated based on the sign of the price changes as in
-#' the \code{\linkS4class{diseq_directional}} model. The model is estimated using full
-#' information maximum likelihood.
+#' evolution equation. The first two equations are stochastic. The price
+#' equation is deterministic. The sample is separated based on the sign of
+#' the price changes as in the \code{\linkS4class{diseq_directional}} model.
+#' The model is estimated using full information maximum likelihood.
 #'
 #' \deqn{D_{nt} = X_{d,nt}'\beta_{d} + P_{nt}\alpha_{d} + u_{d,nt},}
 #' \deqn{S_{nt} = X_{s,nt}'\beta_{s} + P_{nt}\alpha_{s} + u_{s,nt},}
@@ -50,8 +50,7 @@ setClass(
 #' show(model)
 setMethod(
   "initialize", "diseq_deterministic_adjustment",
-  function(
-           .Object,
+  function(.Object,
            quantity, price, demand, supply, subject, time,
            data,
            correlated_shocks = TRUE, verbose = 0) {
@@ -71,10 +70,34 @@ setMethod(
       .Object@logger,
       "Sample separated with ", sum(.Object@system@demand@separation_subset),
       " rows in excess supply and ",
-      sum(.Object@system@supply@separation_subset), " in excess demand regime."
+      sum(.Object@system@supply@separation_subset), " in excess demand state."
     )
 
     .Object
+  }
+)
+
+#' @describeIn single_call_estimation Disequilibrium model with deterministic
+#' price adjustments.
+#' @export
+setGeneric(
+  "diseq_deterministic_adjustment",
+  function(specification, data,
+           correlated_shocks = TRUE, verbose = 0,
+           estimation_options = list()) {
+    standardGeneric("diseq_deterministic_adjustment")
+  }
+)
+
+#' @rdname single_call_estimation
+setMethod(
+  "diseq_deterministic_adjustment", signature(specification = "formula"),
+  function(specification, data, correlated_shocks, verbose,
+           estimation_options) {
+    initialize_from_formula(
+      "diseq_deterministic_adjustment", specification, data,
+      correlated_shocks, verbose, estimation_options
+    )
   }
 )
 
@@ -103,5 +126,51 @@ setMethod(
   function(object, parameters) {
     object@system <- set_parameters(object@system, parameters)
     -calculate_system_scores(object@system)
+  }
+)
+
+setMethod(
+  "calculate_initializing_values",
+  signature(object = "diseq_deterministic_adjustment"),
+  function(object) {
+    demand <- stats::lm(
+      object@system@demand@dependent_vector ~
+      object@system@demand@independent_matrix - 1
+    )
+    names(demand$coefficients) <- colnames(
+      object@system@demand@independent_matrix
+    )
+    var_d <- var(demand$residuals)
+    names(var_d) <- prefixed_variance_variable(object@system@demand)
+
+    supply <- stats::lm(
+      object@system@supply@dependent_vector ~
+      object@system@supply@independent_matrix - 1
+    )
+    names(supply$coefficients) <- colnames(
+      object@system@supply@independent_matrix
+    )
+    var_s <- var(supply$residuals)
+    names(var_s) <- prefixed_variance_variable(object@system@supply)
+
+    dp <- object@model_tibble[, price_differences_variable(object@system)] %>%
+      dplyr::pull()
+    xd <- demand$fitted.values - supply$fitted.values
+    prices <- stats::lm(dp ~ xd - 1)
+    names(prices$coefficients) <- price_differences_variable(object@system)
+
+    start <- c(
+      demand$coefficients, supply$coefficients,
+      prices$coefficients, var_d, var_s
+    )
+
+    if (object@system@correlated_shocks) {
+      rho <- 0.0
+      names(rho) <- correlation_variable(object@system)
+
+      start <- c(start, rho)
+    }
+
+    start
   }
 )

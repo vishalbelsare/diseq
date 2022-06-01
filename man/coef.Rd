@@ -2,7 +2,7 @@
 % Please edit documentation in R/market_fit.R
 \name{coef,market_fit-method}
 \alias{coef,market_fit-method}
-\title{Estimated coefficients.}
+\title{Estimated coefficients of a fitted market model.}
 \usage{
 \S4method{coef}{market_fit}(object)
 }
@@ -17,20 +17,15 @@ Returns the coefficients of the fitted model.
 }
 \examples{
 \donttest{
-# initialize the model using the houses dataset
-model <- new(
-  "diseq_deterministic_adjustment", # model type
-  subject = ID, time = TREND, quantity = HS, price = RM,
-  demand = RM + TREND + W + CSHS + L1RM + L2RM + MONTH,
-  supply = RM + TREND + W + L1RM + MA6DSF + MA3DHF + MONTH,
-  fair_houses(), # data
-  correlated_shocks = FALSE # allow shocks to be correlated
-)
+# estimate a model using the houses dataset
+fit <- diseq_deterministic_adjustment(
+  HS | RM | ID | TREND ~
+  RM + TREND + W + CSHS + L1RM + L2RM + MONTH |
+  RM + TREND + W + L1RM + MA6DSF + MA3DHF + MONTH,
+  fair_houses(),  correlated_shocks = FALSE,
+  estimation_options = list(control = list(maxit = 1e+6)))
 
-# estimate the model.
-est <- estimate(model, control = list(maxit = 1e+5), method = "BFGS")
-
-# summarize results
-coef(est)
+# access the estimated coefficients
+coef(fit)
 }
 }

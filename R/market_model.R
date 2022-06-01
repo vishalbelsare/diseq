@@ -1,22 +1,21 @@
 #' @include model_logger.R
 #' @include system_base.R
 #' @importFrom bbmle mle2 parnames summary
-#' @importFrom grid grid.raster
-#' @importFrom png readPNG
+#' @import dplyr
+#' @importFrom graphics legend lines
+#' @importFrom magrittr %>%
 #' @importFrom rlang :=
 #' @importFrom stats formula lm model.matrix na.omit median qnorm sd var
-#' @import dplyr magrittr tibble
+#' @import tibble
 
-setClassUnion("characterOrNULL", c("character", "NULL"))
 setOldClass(c("spec_tbl_df", "tbl_df", "tbl", "data.frame"))
 utils::globalVariables("where")
 
 #' @title Market model classes
 #'
 #' @slot logger Logger object.
-#' @slot key_columns Vector of column names that uniquely identify data records. For
-#' panel data this vector should contain an entity and a time point identifier.
-#' @slot time_column Column name for the time point data.
+#' @slot subject_columns Column name for the subject identifier.
+#' @slot time_column Column name for the time point identifier.
 #' @slot explanatory_columns Vector of explanatory column names for all model's
 #' equations.
 #' @slot data_columns Vector of model's data column names. This is the union of the
@@ -37,8 +36,8 @@ setClass(
     logger = "model_logger",
 
     ## Column fields
-    key_columns = "vector",
-    time_column = "characterOrNULL",
+    subject_column = "character",
+    time_column = "character",
     explanatory_columns = "vector",
     data_columns = "vector",
     columns = "vector",
@@ -58,11 +57,12 @@ setClass(
 #' model classes.
 #'
 #' \subsection{Variable construction}{
-#' The constructor prepares the model's variables using the passed specifications. The
-#' specification variables are expected to be of type `language`. The right hand side
-#' specifications of the system are expected to follow the syntax of
-#' \code{\link[stats]{formula}}. The construction of the model's data uses the variables
-#' that are extracted by these specification. The demand variables are extracted by a
+#' The constructor prepares the model's variables using the passed
+#' specifications. The specification variables are expected to be of type
+#' \code{language}. The right hand side specifications of the system are
+#' expected to follow the syntax of \code{\link[stats]{formula}}. The
+#' construction of the model's data uses the variables extracted by these
+#' specification. The demand variables are extracted by a
 #' formula that uses the \code{quantity} on the left hand side and the
 #' \code{demand} on the right hand side of the formula. The supply
 #' variables are constructed by the \code{quantity} and the
@@ -116,68 +116,85 @@ setClass(
 #' @name initialize_market_model
 NULL
 
+
 make_specification <- function(data, quantity, price, demand, supply,
                                subject, time, price_dynamics) {
-  env <- parent.frame()
+  logger <- new("model_logger", 0)
 
-  no_parts <- 7
-  if (missing(price_dynamics)) {
-    no_parts <- 6
+  found <- rep(FALSE, 6)
+  if (!missing(price_dynamics)) {
+    found <- c(found, FALSE)
   }
-  found_parts <- 0
 
   fm <- NULL
   dnames <- names(data)
+
   n <- sys.nframe()
   while (!identical(sys.frame(which = n), globalenv())) {
-    squantity <- toString(substitute(quantity, env = sys.frame(which = n)))
-    if (squantity %in% dnames) {
-      quantity <- squantity
-      found_parts <- found_parts + 1
+    if (!found[1]) {
+      squantity <- toString(substitute(quantity, env = sys.frame(which = n)))
+      if (squantity %in% dnames) {
+        quantity <- squantity
+        found[1] <- TRUE
+      }
     }
 
-    sprice <- toString(substitute(price, env = sys.frame(which = n)))
-    if (sprice %in% dnames) {
-      price <- sprice
-      found_parts <- found_parts + 1
+    if (!found[2]) {
+      sprice <- toString(substitute(price, env = sys.frame(which = n)))
+      if (sprice %in% dnames) {
+        price <- sprice
+        found[2] <- TRUE
+      }
     }
 
-    ssubject <- toString(substitute(subject, env = sys.frame(which = n)))
-    if (ssubject %in% dnames) {
-      subject <- ssubject
-      found_parts <- found_parts + 1
+    if (!found[3]) {
+      sdemand <- all.vars(substitute(demand, env = sys.frame(which = n)))
+      if (all(sdemand %in% dnames)) {
+        demand <- paste0(sdemand, collapse = " + ")
+        found[3] <- TRUE
+      }
     }
 
-    stime <- toString(substitute(time, env = sys.frame(which = n)))
-    if (stime %in% dnames) {
-      time <- stime
-      found_parts <- found_parts + 1
+    if (!found[4]) {
+      ssupply <- all.vars(substitute(supply, env = sys.frame(which = n)))
+      if (all(ssupply %in% dnames)) {
+        supply <- paste0(ssupply, collapse = " + ")
+        found[4] <- TRUE
+      }
     }
 
-    sdemand <- all.vars(substitute(demand, env = sys.frame(which = n)))
-    if (all(sdemand %in% dnames)) {
-      demand <- paste0(sdemand, collapse = " + ")
-      found_parts <- found_parts + 1
+    if (!found[5]) {
+      ssubject <- toString(substitute(subject, env = sys.frame(which = n)))
+      if (ssubject %in% dnames) {
+        subject <- ssubject
+        found[5] <- TRUE
+      }
     }
 
-    ssupply <- all.vars(substitute(supply, env = sys.frame(which = n)))
-    if (all(ssupply %in% dnames)) {
-      supply <- paste0(ssupply, collapse = " + ")
-      found_parts <- found_parts + 1
+    if (!found[6]) {
+      stime <- toString(substitute(time, env = sys.frame(which = n)))
+      if (stime %in% dnames) {
+        time <- stime
+        found[6] <- TRUE
+      }
     }
 
-    sprice_dynamics <- all.vars(substitute(
-      price_dynamics,
-      env = sys.frame(which = n)
-    ))
-    if (length(sprice_dynamics) > 0 & all(sprice_dynamics %in% dnames)) {
-      price_dynamics <- sprice_dynamics
-      found_parts <- found_parts + 1
+    if (length(found) == 7) {
+      if (!found[7]) {
+        sprice_dynamics <- all.vars(substitute(
+          price_dynamics,
+          env = sys.frame(which = n)
+        ))
+        if (all(sprice_dynamics %in% dnames)) {
+          price_dynamics <- paste0(sprice_dynamics, collapse = " + ")
+          found[7] <- TRUE
+        }
+      }
     }
 
-    if (found_parts == no_parts) {
+    if (all(found)) {
       rhs <- paste(demand, supply, sep = " | ")
-      if (!missing(price_dynamics)) {
+      if (length(found) == 7) {
         rhs <- paste(rhs, price_dynamics, sep = " | ")
       }
       fm <- formula(paste0(
@@ -186,10 +203,26 @@ make_specification <- function(data, quantity, price, demand, supply,
       ))
       break
     }
-    cat("\n")
     n <- n - 1
   }
-  specification <- Formula(eval(fm))
+  tryCatch(
+    {
+      specification <- Formula::Formula(eval(fm))
+    },
+    error = function(e) {
+      part_names <- c(
+        "quantity", "price", "demand", "supply",
+        "subject", "time"
+      )
+      if (length(found) == 7) {
+        part_names <- c(part_names, "price_dynamics")
+      }
+      print_error(
+        logger, "Failed to substitute model formula parts: ",
+        paste0(part_names[!found], collapse = ", "), "."
+      )
+    }
+  )
 
   specification
 }
@@ -208,13 +241,16 @@ setMethod(
     .Object@system@correlated_shocks <- correlated_shocks
     print_info(.Object@logger, "This is '", model_name(.Object), "' model")
 
-    .Object@key_columns <- all.vars(formula(specification, lhs = 3:4, rhs = 0))
+    .Object@subject_column <- all.vars(formula(specification, lhs = 3, rhs = 0))
     .Object@time_column <- all.vars(formula(specification, lhs = 4, rhs = 0))
 
     .Object@explanatory_columns <- all.vars(specification[[3]])
 
     .Object@data_columns <- all.vars(specification)
-    .Object@columns <- unique(c(.Object@key_columns, .Object@data_columns))
+    .Object@columns <- unique(c(
+      .Object@subject_column, .Object@time_column,
+      .Object@data_columns
+    ))
 
     ## Data assignment
     .Object@model_tibble <- data
@@ -226,7 +262,7 @@ setMethod(
       na.omit()
     drops <- len - nrow(.Object@model_tibble)
     if (drops) {
-      print_warning(.Object@logger, "Dropping ", drops, " rows due to omitted values.")
+      print_warning(.Object@logger, "Dropping ", drops, " rows due to missing values.")
     }
 
     remove_unused_levels <- function(x) {
@@ -249,7 +285,7 @@ setMethod(
       ))
 
     ## Create primary key column
-    key_columns_syms <- rlang::syms(.Object@key_columns)
+    key_columns_syms <- rlang::syms(c(.Object@subject_column, .Object@time_column))
     .Object@model_tibble <- .Object@model_tibble %>%
       dplyr::mutate(pk = as.integer(paste0(!!!key_columns_syms)))
 
@@ -258,8 +294,7 @@ setMethod(
       "Directional", "Deterministic Adjustment", "Stochastic Adjustment"
     )) {
       ## Generate lags
-      key_syms <- rlang::syms(.Object@key_columns[.Object@key_columns !=
-        .Object@time_column])
+      subject_sym <- rlang::syms(.Object@subject_column)
       price_column <- all.vars(formula(specification, lhs = 2, rhs = 0))
       price_sym <- rlang::sym(price_column)
       time_sym <- rlang::sym(.Object@time_column)
@@ -267,7 +302,7 @@ setMethod(
       lagged_price_sym <- rlang::sym(lagged_price_column)
 
       .Object@model_tibble <- .Object@model_tibble %>%
-        dplyr::group_by(!!!key_syms) %>%
+        dplyr::group_by(!!!subject_sym) %>%
         dplyr::mutate(
           !!lagged_price_sym := dplyr::lag(!!price_sym, order_by = !!time_sym)
         ) %>%
@@ -280,33 +315,23 @@ setMethod(
       .Object@model_tibble <- .Object@model_tibble[!drop_rows, ]
       print_info(
         .Object@logger, "Dropping ",
-        sum(drop_rows), " rows by generating '", lagged_price_column, "'."
+        sum(drop_rows), " rows to generate '", lagged_price_column, "'."
       )
 
-      ## Do we need to use first differences?
-      if (.Object@model_type_string %in% c("Directional", "Deterministic Adjustment")) {
-        ## Generate first differences
-        diff_column <- paste0(price_column, "_DIFF")
-        diff_sym <- rlang::sym(diff_column)
+      ## Generate first differences
+      diff_column <- paste0(price_column, "_DIFF")
+      diff_sym <- rlang::sym(diff_column)
 
-        .Object@model_tibble <- .Object@model_tibble %>%
-          dplyr::group_by(!!!key_syms) %>%
-          dplyr::mutate(!!diff_sym := !!price_sym - !!lagged_price_sym) %>%
-          dplyr::ungroup()
-      }
+      .Object@model_tibble <- .Object@model_tibble %>%
+        dplyr::group_by(!!!subject_sym) %>%
+        dplyr::mutate(!!diff_sym := !!price_sym - !!lagged_price_sym) %>%
+        dplyr::ungroup()
     }
 
-    if (.Object@model_type_string %in% c("Stochastic Adjustment")) {
-      .Object@system <- system_initializer(
-        specification,
-        .Object@model_tibble, correlated_shocks
-      )
-    } else {
-      .Object@system <- system_initializer(
-        specification,
-        .Object@model_tibble, correlated_shocks
-      )
-    }
+    .Object@system <- system_initializer(
+      specification,
+      .Object@model_tibble, correlated_shocks
+    )
 
     print_verbose(
       .Object@logger, "Using columns ",
@@ -315,6 +340,119 @@ setMethod(
 
     .Object
   }
+)
+
+initialize_from_formula <- function(model_type, specification, data,
+                                    correlated_shocks, verbose,
+                                    estimation_options) {
+  specification <- Formula::Formula(specification)
+  quantity <- terms(specification, lhs = 1, rhs = 0)[[2]]
+  price <- terms(specification, lhs = 2, rhs = 0)[[2]]
+  demand <- terms(specification, lhs = 0, rhs = 1)[[2]]
+  supply <- terms(specification, lhs = 0, rhs = 2)[[2]]
+  subject <- terms(specification, lhs = 3, rhs = 0)[[2]]
+  time <- terms(specification, lhs = 4, rhs = 0)[[2]]
+  args <- list(
+    model_type,
+    quantity = quantity, price = price,
+    demand = demand, supply = supply,
+    subject = subject, time = time,
+    data = data, correlated_shocks = correlated_shocks, verbose = verbose
+  )
+  if (length(specification)[2] > 2) {
+    price_dynamics <- terms(specification, lhs = 0, rhs = 3)[[2]]
+    args <- append(args, price_dynamics)
+  }
+  model <- do.call(new, args)
+  if (length(estimation_options)) {
+    do.call(diseq::estimate, c(list(model), estimation_options))
+  } else {
+    diseq::estimate(model)
+  }
+}
+
+#' @title Single call estimation
+#'
+#' @details
+#' The functions of this section combine model initialization and estimation
+#' into a single call. They also provide a less verbose interface to the
+#' functionality of the package. The functions expect a formula following the
+#' specification described in \link[=market_model_formula]{formula}, a
+#' dataset, and optionally further initialization (see
+#' \link[=initialize_market_model]{model initialization}) and
+#' estimation (see \link[=estimate]{model estimation}) options.
+#'
+#' Each of these functions parses the passed formula, initializes the model
+#' specified by the function's name, fit the model to the passed data using
+#' the estimation options and returns fitted model.
+#'
+#' @param specification The model's formula.
+#' @param data The data to be used with the model.
+#' @param correlated_shocks Should the model's system entail correlated shocks?
+#' By default the argument is set to \code{TRUE}.
+#' @param verbose The verbosity with which operations on the model print
+#' messages. By default the value is set to \code{0}, which prints only errors.
+#' @param estimation_options A list with options to be used in the estimation
+#' call. See \code{\link[diseq]{estimate}} for the available options.
+#' @return The fitted model.
+#' @name single_call_estimation
+NULL
+
+
+#' @title Market model formula.
+#' @details Market model formulas adhere to the following specification:
+#'
+#' \code{quantity | price | subject | time ~ demand | supply}
+#'
+#' where
+#' \itemize{
+#' \item{quantity} The model's traded (observed) quantity variable.
+#' \item{price} The model's price variable.
+#' \item{quantity} The model's subject (e.g. firm) identification variable.
+#' \item{quantity} The model's time identification variable.
+#' \item{demand} The right hand side of the model's demand equation.
+#' \item{supply} The right hand side of the model's supply equation.
+#' }
+#'
+#' The \code{\linkS4class{diseq_stochastic_adjustment}} additionally specify
+#' price dynamics by appending the right hand side of the equation at the end
+#' of the formula, i.e.
+#'
+#' \code{quantity | price | subject | time ~ demand | supply | price_dynamics}
+#'
+#' The left hand side part of the model formula specifies the elements that
+#' are needed for initializing the model. The market models of the package
+#' prepare the data based on these four variables using their respective
+#' identification assumptions. See \link[=market_models]{market model classes}
+#' for more details.
+#'
+#' The function provides access to the formula used in model initialization.
+#' @param x A market model object.
+#' @return The model's formula
+#' @examples
+#' \donttest{
+#' model <- simulate_model(
+#'   "diseq_stochastic_adjustment", list(
+#'     # observed entities, observed time points
+#'     nobs = 500, tobs = 3,
+#'     # demand coefficients
+#'     alpha_d = -0.1, beta_d0 = 9.8, beta_d = c(0.3, -0.2), eta_d = c(0.6, -0.1),
+#'     # supply coefficients
+#'     alpha_s = 0.1, beta_s0 = 6.1, beta_s = c(0.9), eta_s = c(-0.5, 0.2),
+#'     # price equation coefficients
+#'     gamma = 1.2, beta_p0 = 3.1, beta_p = c(0.8)
+#'   ),
+#'   seed = 31
+#' )
+#'
+#' # access the model's formula
+#' formula(model)
+#' }
+#' @aliases market_model_formula
+#' @export
+setMethod(
+  "formula", signature(x = "market_model"),
+  function(x) formula(x@system@formula)
 )
 
 #' Prints a short description of the model.
@@ -330,7 +468,7 @@ setMethod(
 #'     # demand coefficients
 #'     alpha_d = -0.1, beta_d0 = 9.8, beta_d = c(0.3, -0.2), eta_d = c(0.6, -0.1),
 #'     # supply coefficients
-#'     alpha_s = 0.1, beta_s0 = 5.1, beta_s = c(0.9), eta_s = c(-0.5, 0.2),
+#'     alpha_s = 0.1, beta_s0 = 7.1, beta_s = c(0.9), eta_s = c(-0.5, 0.2),
 #'     # price equation coefficients
 #'     gamma = 1.2, beta_p0 = 3.1, beta_p = c(0.8)
 #'   ),
@@ -342,12 +480,9 @@ setMethod(
 #' }
 #' @rdname show
 #' @export
-setGeneric("show")
-
-#' @rdname show
 setMethod("show", signature(object = "market_model"), function(object) {
   cat(sprintf(
-    "\n%s Model for Markets in %s\n",
+    "%s Model for Markets in %s\n",
     object@model_type_string, object@market_type_string
   ))
   show_implementation(object@system)
@@ -399,7 +534,7 @@ setMethod("summary", signature(object = "market_model"), function(object) {
   summary_implementation(object@system)
   cat(sprintf(
     "  %-18s: %s\n", "Key Var(s)",
-    paste0(object@key_columns, collapse = ", ")
+    paste0(c(object@subject_column, object@time_column), collapse = ", ")
   ))
   if (!is.null(object@time_column)) {
     cat(sprintf(
@@ -407,38 +542,6 @@ setMethod("summary", signature(object = "market_model"), function(object) {
       paste0(object@time_column, collapse = ", ")
     ))
   }
-})
-
-#' Plots the model.
-#'
-#' Displays a graphical illustration of the passed model object.
-#' @param x A model object.
-#' @examples
-#' \donttest{
-#' model <- simulate_model(
-#'   "diseq_basic", list(
-#'     # observed entities, observed time points
-#'     nobs = 500, tobs = 3,
-#'     # demand coefficients
-#'     alpha_d = -0.9, beta_d0 = 8.9, beta_d = c(0.3, -0.2), eta_d = c(-0.03, -0.01),
-#'     # supply coefficients
-#'     alpha_s = 0.9, beta_s0 = 4.2, beta_s = c(0.03), eta_s = c(0.05, 0.02)
-#'   ),
-#'   seed = 44
-#' )
-#'
-#' # show model's illustration plot
-#' plot(model)
-#' }
-#' @rdname plot
-#' @export
-setMethod("plot", signature(x = "market_model"), function(x) {
-  filename <- paste0(class(x)[1], ".png")
-  path <- system.file("help", "figures", filename, package = "diseq")
-  if (path == "") {
-    path <- system.file("man", "figures", filename, package = "diseq")
-  }
-  grid::grid.raster(png::readPNG(path))
 })
 
 #' Minus log-likelihood.
@@ -542,6 +645,7 @@ validate_standard_error_option <- function(object, option) {
 #' @param step Optimization step.
 #' @param objective_tolerance Objective optimization tolerance.
 #' @param gradient_tolerance Gradient optimization tolerance.
+#' @param max_it Maximum allowed number of iterations.
 #' @return A list with the optimization output.
 #' @rdname maximize_log_likelihood
 #' @seealso estimate
@@ -563,25 +667,28 @@ validate_standard_error_option <- function(object, option) {
 #' mll <- maximize_log_likelihood(
 #'   model,
 #'   start = NULL, step = 1e-5,
-#'   objective_tolerance = 1e-4, gradient_tolerance = 1e-3
+#'   objective_tolerance = 1e-4, gradient_tolerance = 1e-3, max_it = 1e+3
 #' )
 #' mll
 #' }
 #' @export
 setGeneric("maximize_log_likelihood", function(object, start, step, objective_tolerance,
-                                               gradient_tolerance) {
+                                               gradient_tolerance, max_it) {
   standardGeneric("maximize_log_likelihood")
 })
 
 #' Likelihood scores.
 #'
-#' It calculates the gradient of the likelihood at the given parameter point for each
-#' observation in the sample. It, therefore, returns an n x k matrix, where n denotes
-#' the number of observations in the sample and k the number of estimated parameters.
-#' There order of the parameters is the same as the one that is used in the summary
-#' of the results.
+#' It calculates the gradient of the likelihood at the given parameter point
+#' for each observation in the sample. It, therefore, returns an n x k matrix,
+#' where n denotes the number of observations in the sample and k the number
+#' of estimated parameters. The ordering of the parameters is the same as
+#' the one that is used in the summary of the results. The method can be
+#' called either using directly a fitted model object, or by separately
+#' providing a model object and a parameter vector.
 #' @param object A model object.
 #' @param parameters A vector with model parameters.
+#' @param fit A fitted model object.
 #' @return The score matrix.
 #' @rdname scores
 #' @examples
@@ -593,19 +700,19 @@ setGeneric("maximize_log_likelihood", function(object, start, step, objective_to
 #'     # demand coefficients
 #'     alpha_d = -0.9, beta_d0 = 8.9, beta_d = c(0.6), eta_d = c(-0.2),
 #'     # supply coefficients
-#'     alpha_s = 0.9, beta_s0 = 4.2, beta_s = c(0.03, 1.2), eta_s = c(0.1)
+#'     alpha_s = 0.9, beta_s0 = 7.9, beta_s = c(0.03, 1.2), eta_s = c(0.1)
 #'   ),
 #'   seed = 7523
 #' )
 #'
 #' # estimate the model object (BFGS is used by default)
-#' est <- estimate(model)
+#' fit <- estimate(model)
 #'
 #' # Calculate the score matrix
-#' head(scores(model, coef(est)))
+#' head(scores(model, coef(fit)))
 #' }
 #' @export
-setGeneric("scores", function(object, parameters) {
+setGeneric("scores", function(object, parameters, fit = missing()) {
   standardGeneric("scores")
 })
 
@@ -627,17 +734,6 @@ setGeneric("set_clustered_errors", function(object, ...) {
 setGeneric("model_name", function(object) {
   standardGeneric("model_name")
 })
-
-#' Number of observations.
-#'
-#' Returns the number of observations that are used by an initialized model. The number
-#' of used observations may differ from the numbers of observations of the data set
-#' that was passed to the model's initialization.
-#' @param object A model object.
-#' @return The number of used observations.
-#' @rdname nobs
-#' @export
-setGeneric("nobs")
 
 #' @title Market side descriptive statistics
 #' @details Calculates and returns basic descriptive statistics for the model's demand
@@ -697,39 +793,39 @@ setGeneric("supply_descriptives", function(object) {
 
 setMethod(
   "set_heteroscedasticity_consistent_errors", signature(object = "market_model"),
-  function(object, est) {
-    est@details$original_hessian <- est@details$hessian
-    scores <- scores(object, coef(est))
+  function(object, fit) {
+    fit@details$original_hessian <- fit@details$hessian
+    scores <- scores(object, coef(fit))
     adjustment <- MASS::ginv(t(scores) %*% scores)
-    est@details$hessian <- est@details$hessian %*% adjustment %*% est@details$hessian
-    est@vcov <- MASS::ginv(est@details$hessian)
-    est
+    fit@details$hessian <- fit@details$hessian %*% adjustment %*% fit@details$hessian
+    fit@vcov <- MASS::ginv(fit@details$hessian)
+    fit
   }
 )
 
 setMethod(
   "set_clustered_errors", signature(object = "market_model"),
-  function(object, est, cluster_errors_by) {
+  function(object, fit, cluster_errors_by) {
     if (!(cluster_errors_by %in% names(object@model_tibble))) {
       print_error(
         object@logger, "Cluster variable is not among model data variables."
       )
     }
-    est@details$original_hessian <- est@details$hessian
+    fit@details$original_hessian <- fit@details$hessian
     cluster_var <- rlang::syms(cluster_errors_by)
     clustered_scores <- tibble::tibble(
       object@model_tibble %>% dplyr::select(!!!cluster_var),
-      tibble::as_tibble(scores(object, coef(est)))
+      tibble::as_tibble(scores(object, coef(fit)))
     ) %>%
       dplyr::group_by(!!!cluster_var) %>%
       dplyr::group_map(~ t(as.matrix(.)) %*% (as.matrix(.)))
-    est@details$number_of_clusters <- length(clustered_scores)
+    fit@details$number_of_clusters <- length(clustered_scores)
     adjustment <- MASS::ginv(Reduce("+", clustered_scores))
-    est@details$hessian <- est@details$hessian %*% adjustment %*% est@details$hessian
-    est@vcov <- MASS::ginv(est@details$hessian) * (
-      est@details$number_of_clusters / (est@details$number_of_clusters - 1)
+    fit@details$hessian <- fit@details$hessian %*% adjustment %*% fit@details$hessian
+    fit@vcov <- MASS::ginv(fit@details$hessian) * (
+      fit@details$number_of_clusters / (fit@details$number_of_clusters - 1)
     )
-    est
+    fit
   }
 )
 
@@ -741,7 +837,15 @@ setMethod("model_name", signature(object = "market_model"), function(object) {
   )
 })
 
+#' Number of observations.
+#'
+#' Returns the number of observations that are used by an initialized model. The number
+#' of used observations may differ from the numbers of observations of the data set
+#' that was passed to the model's initialization.
+#' @param object A model object.
+#' @return The number of used observations.
 #' @rdname nobs
+#' @export
 setMethod(
   "nobs", signature(object = "market_model"),
   function(object) {
@@ -792,82 +896,6 @@ setMethod("supply_descriptives", signature(object = "market_model"), function(ob
   ))
 })
 
-setGeneric("calculate_initializing_values", function(object) {
-  standardGeneric("calculate_initializing_values")
-})
-
-setMethod(
-  "calculate_initializing_values", signature(object = "market_model"),
-  function(object) {
-    dlm <- stats::lm(
-      object@system@quantity_vector ~
-      object@system@demand@independent_matrix - 1
-    )
-    names(dlm$coefficients) <- colnames(
-      object@system@demand@independent_matrix
-    )
-
-    slm <- stats::lm(
-      object@system@quantity_vector ~
-      object@system@supply@independent_matrix - 1
-    )
-    names(slm$coefficients) <- colnames(
-      object@system@supply@independent_matrix
-    )
-
-    ## Set demand initializing values
-    if (any(is.na(dlm$coefficients))) {
-      print_warning(
-        object@logger,
-        "Setting demand side NA initial values to zero: ",
-        paste0(names(dlm$coefficients[is.na(dlm$coefficients)]), collapse = ", "), "."
-      )
-      dlm$coefficients[is.na(dlm$coefficients)] <- 0
-    }
-    start_names <- c(
-      prefixed_price_variable(object@system@demand),
-      prefixed_control_variables(object@system@demand)
-    )
-    start <- c(dlm$coefficients[start_names])
-
-    ## Set supply initializing values
-    if (any(is.na(slm$coefficients))) {
-      print_warning(
-        object@logger,
-        "Setting supply side NA initial values to zero: ",
-        paste0(names(slm$coefficients[is.na(slm$coefficients)]), collapse = ", ")
-      )
-      slm$coefficients[is.na(slm$coefficients)] <- 0
-    }
-    start_names <- c(
-      prefixed_price_variable(object@system@supply),
-      prefixed_control_variables(object@system@supply)
-    )
-    start <- c(start, slm$coefficients[start_names])
-
-    if (object@model_type_string %in% c(
-      "Deterministic Adjustment",
-      "Stochastic Adjustment"
-    )) {
-      start <- c(start, gamma = 1)
-      names(start)[length(start)] <- price_differences_variable(object@system)
-    }
-
-    start <- c(start, 1, 1)
-    names(start)[(length(start) - 1):length(start)] <- c(
-      prefixed_variance_variable(object@system@demand),
-      prefixed_variance_variable(object@system@supply)
-    )
-
-    if (object@system@correlated_shocks) {
-      start <- c(start, rho = 0)
-      names(start)[length(start)] <- correlation_variable(object@system)
-    }
-
-    start
-  }
-)
-
 setGeneric("prepare_initializing_values", function(object, initializing_vector) {
   standardGeneric("prepare_initializing_values")
 })
@@ -894,36 +922,31 @@ setMethod(
 
 #' @title Market side aggregation.
 #'
-#' @details Calculates the sample's aggregate demand or supply at the passed set of
-#' parameters. If the model is static, as is for example the case of
-#' \code{\linkS4class{equilibrium_model}}, then all observations are aggregated. If the
-#' used data have a time dimension and aggregation per date is required, it can be
-#' manually performed using the \code{\link{demanded_quantities}} and
-#' \code{\link{supplied_quantities}} functions. If the model has a dynamic component,
-#' such as the \code{\linkS4class{diseq_deterministic_adjustment}}, then demanded
-#' and supplied quantities are automatically aggregated for each time point.
-#' @param object A model object.
+#' @details Calculates the sample's aggregate demand or supply using the
+#' estimated coefficients of a fitted model. Alternatively, the function
+#' calculates aggregates using a model and a set of parameters passed
+#' separately. If the model's data have multiple distinct subjects at each
+#' date, aggregation is calculated over subjects per unique date. If the model
+#' has time series data, namely a single subject per time point, aggregation
+#' is ululated over all time pints.
+#' @param fit A fitted market model object.
+#' @param model A model object.
 #' @param parameters A vector of model's parameters.
 #' @return The sum of the estimated demanded or supplied quantities evaluated at the
 #' given parameters.
 #' @name market_aggregation
 #' @examples
 #' \donttest{
-#' # initialize the basic model using the houses dataset
-#' model <- new(
-#'   "diseq_basic", # model type
-#'   subject = ID, time = TREND, quantity = HS, price = RM,
-#'   demand = RM + TREND + W + CSHS + L1RM + L2RM + MONTH,
-#'   supply = RM + TREND + W + L1RM + MA6DSF + MA3DHF + MONTH,
-#'   fair_houses(), # data
-#'   correlated_shocks = FALSE # allow shocks to be correlated
+#' fit <- diseq_basic(
+#'   HS | RM | ID | TREND ~
+#'   RM + TREND + W + CSHS + L1RM + L2RM + MONTH |
+#'     RM + TREND + W + L1RM + MA6DSF + MA3DHF + MONTH,
+#'   fair_houses(),
+#'   correlated_shocks = FALSE
 #' )
 #'
-#' # estimate the model object (BFGS is used by default)
-#' est <- estimate(model)
-#'
 #' # get estimated aggregate demand
-#' aggregate_demand(model, coef(est))
+#' aggregate_demand(fit)
 #'
 #' # simulate the deterministic adjustment model
 #' model <- simulate_model(
@@ -941,53 +964,46 @@ setMethod(
 #' )
 #'
 #' # estimate the model object
-#' est <- estimate(model)
+#' fit <- estimate(model)
 #'
 #' # get estimated aggregate demand
-#' aggregate_demand(model, coef(est))
+#' aggregate_demand(fit)
 #'
 #' # get estimated aggregate demand
-#' aggregate_supply(model, coef(est))
+#' aggregate_supply(fit)
 #' }
 #' @seealso demanded_quantities, supplied_quantities
 NULL
 
-setGeneric("aggregate_equation", function(object, parameters, equation) {
-  standardGeneric("aggregate_equation")
-})
-
-setMethod(
-  "aggregate_equation", signature(object = "market_model"),
-  function(object, parameters, equation) {
-    object@system <- set_parameters(object@system, parameters)
-    quantities <- quantities(slot(object@system, equation))
-    result <- NULL
-    if (!is.null(object@time_column)) {
-      time_symbol <- rlang::sym(object@time_column)
-      aggregate_symbol <- rlang::sym(colnames(quantities))
-      result <- object@model_tibble[, object@time_column] %>%
-        dplyr::mutate(!!aggregate_symbol := quantities) %>%
-        dplyr::group_by(!!time_symbol) %>%
-        dplyr::summarise(!!aggregate_symbol := sum(!!aggregate_symbol))
-    } else {
-      result <- sum(quantities)
-    }
-    result
+aggregate_equation <- function(model, parameters, equation) {
+  model@system <- set_parameters(model@system, parameters)
+  qs <- quantities(slot(model@system, equation))
+  result <- NULL
+  if (nrow(unique(model@model_tibble[, model@subject_column])) > 1) {
+    time_symbol <- rlang::sym(model@time_column)
+    aggregate_symbol <- rlang::sym(colnames(qs))
+    result <- model@model_tibble[, model@time_column] %>%
+      dplyr::mutate(!!aggregate_symbol := qs) %>%
+      dplyr::group_by(!!time_symbol) %>%
+      dplyr::summarise(!!aggregate_symbol := sum(!!aggregate_symbol))
+  } else {
+    result <- sum(qs)
   }
-)
+  result
+}
 
 
 #' @describeIn market_aggregation Demand aggregation.
 #' @export
-setGeneric("aggregate_demand", function(object, parameters) {
+setGeneric("aggregate_demand", function(fit, model, parameters) {
   standardGeneric("aggregate_demand")
 })
 
 #' @rdname market_aggregation
 setMethod(
-  "aggregate_demand", signature(object = "market_model"),
-  function(object, parameters) {
-    aggregate_equation(object, parameters, "demand")
+  "aggregate_demand", signature(fit = "missing", model = "market_model"),
+  function(model, parameters) {
+    aggregate_equation(model, parameters, "demand")
   }
 )
 
@@ -995,29 +1011,25 @@ setMethod(
 #'
 #' @details Calculates and returns the estimated demanded or supplied quantities for
 #' each observation at the passed vector of parameters.
-#' @param object A model object.
+#' @param fit A fitted model object.
+#' @param model A model object.
 #' @param parameters A vector of model's parameters.
 #' @return A vector with the demanded quantities evaluated at the given parameter
 #' vector.
 #' @examples
 #' \donttest{
-#' # initialize the model using the houses dataset
-#' model <- new(
-#'   "diseq_basic", # model type
-#'   subject = ID, time = TREND, quantity = HS, price = RM,
-#'   demand = RM + TREND + W + CSHS + L1RM + L2RM + MONTH,
-#'   supply = RM + TREND + W + L1RM + MA6DSF + MA3DHF + MONTH,
-#'   fair_houses(), # data
-#'   correlated_shocks = FALSE # allow shocks to be correlated
+#' fit <- diseq_basic(
+#'   HS | RM | ID | TREND ~
+#'   RM + TREND + W + CSHS + L1RM + L2RM + MONTH |
+#'     RM + TREND + W + L1RM + MA6DSF + MA3DHF + MONTH,
+#'   fair_houses(),
+#'   correlated_shocks = FALSE
 #' )
-#'
-#' # estimate the model object (BFGS is used by default)
-#' est <- estimate(model)
 #'
 #' # get estimated demanded and supplied quantities
 #' head(cbind(
-#'   demanded_quantities(model, coef(est)),
-#'   supplied_quantities(model, coef(est))
+#'   demanded_quantities(fit),
+#'   supplied_quantities(fit)
 #' ))
 #' }
 #' @name market_quantities
@@ -1025,44 +1037,386 @@ NULL
 
 #' @describeIn market_quantities Estimated demanded quantities.
 #' @export
-setGeneric("demanded_quantities", function(object, parameters) {
+setGeneric("demanded_quantities", function(fit, model, parameters) {
   standardGeneric("demanded_quantities")
 })
 
 #' @rdname market_quantities
 setMethod(
-  "demanded_quantities", signature(object = "market_model"),
-  function(object, parameters) {
-    object@system <- set_parameters(object@system, parameters)
-    quantities(object@system@demand)
+  "demanded_quantities", signature(fit = "missing", model = "market_model"),
+  function(model, parameters) {
+    model@system <- set_parameters(model@system, parameters)
+    quantities(model@system@demand)
   }
 )
 
 #' @describeIn market_aggregation Supply aggregation.
 #' @export
-setGeneric("aggregate_supply", function(object, parameters) {
+setGeneric("aggregate_supply", function(fit, model, parameters) {
   standardGeneric("aggregate_supply")
 })
 
 #' @rdname market_aggregation
 setMethod(
-  "aggregate_supply", signature(object = "market_model"),
-  function(object, parameters) {
-    aggregate_equation(object, parameters, "supply")
+  "aggregate_supply", signature(fit = "missing", model = "market_model"),
+  function(model, parameters) {
+    aggregate_equation(model, parameters, "supply")
   }
 )
 
 #' @describeIn market_quantities Estimated supplied quantities.
 #' @export
-setGeneric("supplied_quantities", function(object, parameters) {
+setGeneric("supplied_quantities", function(fit, model, parameters) {
   standardGeneric("supplied_quantities")
 })
 
 #' @rdname market_quantities
 setMethod(
-  "supplied_quantities", signature(object = "market_model"),
-  function(object, parameters) {
-    object@system <- set_parameters(object@system, parameters)
-    quantities(object@system@supply)
+  "supplied_quantities", signature(fit = "missing", model = "market_model"),
+  function(model, parameters) {
+    model@system <- set_parameters(model@system, parameters)
+    quantities(model@system@supply)
+  }
+)
+
+
+#' @title Analysis of shortages
+#'
+#' @details The following methods offer functionality for analyzing estimated
+#' shortages of the market models. The methods can be called either
+#' using directly a fitted model object, or by separately providing a model
+#' object and a parameter vector.
+#' @param fit A fitted model object.
+#' @param model A market model object.
+#' @param parameters A vector of parameters at which the shortages are evaluated.
+#' @return A vector with the (estimated) shortages.
+#' @examples
+#' \donttest{
+#' # estimate a model using the houses dataset
+#' fit <- diseq_deterministic_adjustment(
+#'   HS | RM | ID | TREND ~
+#'   RM + TREND + W + CSHS + L1RM + L2RM + MONTH |
+#'   RM + TREND + W + L1RM + MA6DSF + MA3DHF + MONTH,
+#'   fair_houses(),  correlated_shocks = FALSE,
+#'   estimation_options = list(control = list(maxit = 1e+5)))
+#'
+#' # get estimated normalized shortages
+#' head(normalized_shortages(fit))
+#'
+#' # get estimated relative shortages
+#' head(relative_shortages(fit))
+#'
+#' # get the estimated shortage probabilities
+#' head(shortage_probabilities(fit))
+#'
+#' # get the estimated shortage indicators
+#' head(shortage_indicators(fit))
+#'
+#' # get the estimated shortages
+#' head(shortages(fit))
+#'
+#' # get the estimated shortage variance
+#' shortage_standard_deviation(fit)
+#' }
+#' @name shortage_analysis
+NULL
+
+#' @describeIn shortage_analysis Shortages.
+#' @details
+#' \subsection{shortages}{
+#' Returns the predicted shortages at a given point.
+#' }
+#' @export
+setGeneric("shortages", function(fit, model, parameters) {
+  standardGeneric("shortages")
+})
+
+#' @describeIn shortage_analysis Normalized shortages.
+#' @details
+#' \subsection{normalized_shortages}{
+#' Returns the shortages normalized by the variance of the difference of the shocks
+#' at a given point.
+#' }
+#' @export
+setGeneric("normalized_shortages", function(fit, model, parameters) {
+  standardGeneric("normalized_shortages")
+})
+
+#' @describeIn shortage_analysis Relative shortages.
+#' @details
+#' \subsection{relative_shortages}{
+#' Returns the shortages normalized by the supplied quantity at a given point.
+#' }
+#' @export
+setGeneric("relative_shortages", function(fit, model, parameters) {
+  standardGeneric("relative_shortages")
+})
+
+#' @describeIn shortage_analysis Shortage probabilities.
+#' @details
+#' \subsection{shortage_probabilities}{
+#' Returns the shortage probabilities, i.e. the probabilities of an
+#' observation coming from an excess demand state, at the given point.
+#' }
+#' @export
+setGeneric("shortage_probabilities", function(fit, model, parameters) {
+  standardGeneric("shortage_probabilities")
+})
+
+#' @describeIn shortage_analysis Shortage indicators.
+#' @details
+#' \subsection{shortage_indicators}{
+#' Returns a vector of indicators (Boolean values) for each observation. An
+#' element of the vector is TRUE for observations at which the estimated
+#' shortages are non-negative, i.e. the market at in an excess demand state.
+#' The remaining elements are FALSE. The evaluation of the shortages is
+#' performed using the passed parameter vector.
+#' }
+#' @export
+setGeneric("shortage_indicators", function(fit, model, parameters) {
+  standardGeneric("shortage_indicators")
+})
+
+#' @describeIn shortage_analysis Shortage variance.
+#' @details
+#' \subsection{shortage_standard_deviation}{
+#' Returns the variance of excess demand.
+#' }
+#' @export
+setGeneric("shortage_standard_deviation", function(fit, model, parameters) {
+  standardGeneric("shortage_standard_deviation")
+})
+
+
+#' Marginal effects
+#'
+#' Returns the estimated effect of a variable.
+#' @param fit A fitted market model.
+#' @param variable Variable name for which the effect is calculated.
+#' @param model A market model object.
+#' @param parameters A vector of parameters.
+#' @param aggregate Mode of aggregation. Valid options are "mean" (the
+#' default) and "at_the_mean".
+#' @return The estimated effect of the passed variable.
+#' @examples
+#' \donttest{
+#' # estimate a model using the houses dataset
+#' fit <- diseq_deterministic_adjustment(
+#'   HS | RM | ID | TREND ~
+#'   RM + TREND + W + CSHS + L1RM + L2RM + MONTH |
+#'   RM + TREND + W + L1RM + MA6DSF + MA3DHF + MONTH,
+#'   fair_houses(),  correlated_shocks = FALSE,
+#'   estimation_options = list(control = list(maxit = 1e+5)))
+#'
+#' # mean marginal effect of variable "RM" on the shortage probabilities
+#' #' shortage_probability_marginal(fit, "RM")
+#'
+#' # marginal effect at the mean of variable "RM" on the shortage probabilities
+#' shortage_probability_marginal(fit, "CSHS", aggregate = "at_the_mean")
+#'
+#' # marginal effect of variable "RM" on the system
+#' shortage_marginal(fit, "RM")
+#' }
+#' @name marginal_effects
+NULL
+
+#' @describeIn marginal_effects Marginal effect on market system
+#'
+#' Returns the estimated marginal effect of a variable on the market system. For a
+#' system variable \eqn{x} with demand coefficient \eqn{\beta_{d, x}} and supply
+#' coefficient \eqn{\beta_{s, x}}, the marginal effect on the market system  is
+#' given by
+#' \deqn{M_{x} = \frac{\beta_{d, x} - \beta_{s, x}}{\sqrt{\sigma_{d}^{2} +
+#' \sigma_{s}^{2} - 2 \rho_{ds} \sigma_{d} \sigma_{s}}}.}
+#' @export
+setGeneric("shortage_marginal", function(fit, variable, model, parameters) {
+  standardGeneric("shortage_marginal")
+})
+
+#' @describeIn marginal_effects Marginal effect on shortage probabilities
+#'
+#' Returns the estimated marginal effect of a variable on the probability of
+#' observing a shortage state. The mean marginal effect on the shortage probability
+#' is given by
+#' \deqn{M_{x} \mathrm{E} \phi\left(\frac{D - S}{\sqrt{\sigma_{d}^2 + \sigma_{s}^2 - 2 rho \sigma_{d} \sigma_{s}}}\right)}
+#' and the marginal effect at the mean by
+#' \deqn{M_{x} \phi\left(\mathrm{E}\frac{D - S}{\sqrt{\sigma_{d}^2 + \sigma_{s}^2 - 2 rho \sigma_{d} \sigma_{s}}}\right)}
+#' where \eqn{M_{x}} is the marginal effect on the system, \eqn{D} is the demanded
+#' quantity, \eqn{S} the supplied quantity, and \eqn{\phi} is the standard normal
+#' density.
+#' @export
+setGeneric(
+  "shortage_probability_marginal",
+  function(fit, variable, aggregate = "mean", model, parameters) {
+    standardGeneric("shortage_probability_marginal")
+  }
+)
+
+
+#' @rdname shortage_analysis
+setMethod(
+  "shortages", signature(model = "market_model", fit = "missing"),
+  function(model, parameters) {
+    model@system <- set_parameters(model@system, parameters)
+    result <- (
+      model@system@demand@independent_matrix %*% model@system@demand@alpha_beta -
+        model@system@supply@independent_matrix %*% model@system@supply@alpha_beta)
+    colnames(result) <- "shortages"
+    result
+  }
+)
+
+#' @rdname shortage_analysis
+setMethod(
+  "normalized_shortages",
+  signature(model = "market_model", fit = "missing"),
+  function(model, parameters) {
+    result <- shortages(
+      model = model, parameters = parameters
+    ) / shortage_standard_deviation(
+      model = model, parameters = parameters
+    )
+    colnames(result) <- c("normalized_shortages")
+    result
+  }
+)
+
+#' @rdname shortage_analysis
+setMethod(
+  "relative_shortages",
+  signature(model = "market_model", fit = "missing"),
+  function(model, parameters) {
+    model@system <- set_parameters(model@system, parameters)
+    demand <- model@system@demand@independent_matrix %*% model@system@demand@alpha_beta
+    supply <- model@system@supply@independent_matrix %*% model@system@supply@alpha_beta
+    result <- (demand - supply) / supply
+    colnames(result) <- "relative_shortages"
+    result
+  }
+)
+
+#' @rdname shortage_analysis
+setMethod(
+  "shortage_probabilities",
+  signature(model = "market_model", fit = "missing"),
+  function(model, parameters) {
+    result <- pnorm(normalized_shortages(
+      model = model, parameters = parameters
+    ))
+    colnames(result) <- "shortage_probabilities"
+    result
+  }
+)
+
+#' @rdname shortage_analysis
+setMethod(
+  "shortage_indicators",
+  signature(model = "market_model", fit = "missing"),
+  function(model, parameters) {
+    result <- shortages(model = model, parameters = parameters) >= 0
+    colnames(result) <- "shortage_indicators"
+    result
+  }
+)
+
+#' @rdname shortage_analysis
+setMethod(
+  "shortage_standard_deviation", signature(
+    model = "market_model",
+    fit = "missing"
+  ),
+  function(model, parameters) {
+    model@system <- set_parameters(model@system, parameters)
+    result <- sqrt(
+      model@system@demand@var + model@system@supply@var -
+        2 * model@system@demand@sigma * model@system@supply@sigma * model@system@rho
+    )
+    names(result) <- "shortage_standard_deviation"
+    result
+  }
+)
+
+#' @rdname marginal_effects
+setMethod(
+  "shortage_marginal", signature(
+    fit = "missing",
+    model = "market_model"
+  ),
+  function(variable, model, parameters) {
+    var <- shortage_standard_deviation(model = model, parameters = parameters)
+    dname <- paste0(model@system@demand@variable_prefix, variable)
+    dvar <- parameters[dname]
+    sname <- paste0(model@system@supply@variable_prefix, variable)
+    svar <- parameters[sname]
+    in_demand <- dname %in% prefixed_independent_variables(model@system@demand)
+    in_supply <- sname %in% prefixed_independent_variables(model@system@supply)
+    if (in_demand && in_supply) {
+      effect <- (dvar - svar) / var
+      names(effect) <- paste0("B_", variable)
+    } else if (in_demand) {
+      effect <- dvar / var
+    } else {
+      effect <- -svar / var
+    }
+    effect
+  }
+)
+
+#' @rdname marginal_effects
+setMethod(
+  "shortage_probability_marginal", signature(
+    fit = "missing",
+    model = "market_model"
+  ),
+  function(variable, aggregate, model, parameters) {
+    marginal_scale_function <- NULL
+    if (aggregate == "mean") {
+      marginal_scale_function <- function(x) {
+        mean(dnorm(normalized_shortages(model = model, parameters = x)))
+      }
+    } else if (aggregate == "at_the_mean") {
+      marginal_scale_function <- function(x) {
+        dnorm(mean(normalized_shortages(model = model, parameters = x)))
+      }
+    } else {
+      allowed_aggergate <- c("mean", "at_the_mean")
+      print_error(model@logger, paste0(
+        "Invalid `aggregate` option '", aggregate, "'. Valid options are ('",
+        paste0(allowed_aggergate, collapse = "', '"), "')."
+      ))
+    }
+
+    marginal_scale <- marginal_scale_function(parameters)
+    shortage_marginal(
+      model = model, parameters = parameters,
+      variable = variable
+    ) * marginal_scale
+  }
+)
+
+
+#' @rdname marginal_effects
+setMethod(
+  "shortage_marginal", signature(
+    fit = "missing",
+    model = "market_model"
+  ),
+  function(variable, model, parameters) {
+    var <- shortage_standard_deviation(model = model, parameters = parameters)
+    dname <- paste0(model@system@demand@variable_prefix, variable)
+    dvar <- parameters[dname]
+    sname <- paste0(model@system@supply@variable_prefix, variable)
+    svar <- parameters[sname]
+    in_demand <- dname %in% prefixed_independent_variables(model@system@demand)
+    in_supply <- sname %in% prefixed_independent_variables(model@system@supply)
+    if (in_demand && in_supply) {
+      effect <- (dvar - svar) / var
+      names(effect) <- paste0("B_", variable)
+    } else if (in_demand) {
+      effect <- dvar / var
+    } else {
+      effect <- -svar / var
+    }
+    effect
   }
 )

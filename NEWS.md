@@ -1,3 +1,68 @@
+# diseq 0.4.6
+
+* Moved deprecation warning emission from `.onLoad` to `.onAttach`.
+
+# diseq 0.4.5
+
+* Switched from warning to message to inform about deprecation during package loading.
+
+# diseq 0.4.4
+
+* Added deprecation warning when loading package.
+* Added deprecation messages in documentation.
+
+# diseq 0.4.3
+
+* Adjusted unit test gradient tolerance for m1 machines.
+* Replaced omitted with missing in warning messages.
+
+# diseq 0.4.2
+
+* Cumulative update of CRAN version. 
+* Specialized calculation of initializing values at a model level. Initializing values are now calculated based on the models' assumptions.
+* Better `coef` behavior with common output format for all models.
+* Extended shortage analysis functionality to the equilibrium model.
+
+# diseq 0.4.1.9005
+
+* Extended the shortage and marginal effect analyses to the cover the equilibrium model.
+
+# diseq 0.4.1.9004
+
+* Separated identifier variables  in `market_model` class.
+* Changes in aggregation functionality. Updated its documentation.
+* Added aggregation plot in 'basic usage' vignette.
+
+# diseq 0.4.1.9003
+
+* Harmonized `coef` output.
+* Simplified `diseq_directional` calculations to improve numerical stability.
+* Model specific initializing values for maximum likelihood estimation
+ - `diseq_basic`: Demand and supply regression estimates using the whole sample.
+ - `diseq_deterministic_adjustment`: Demand and supply regression estimates using the whole sample. Price differences are regressed on estimated excess demand for the price equation.
+ - `diseq_directional`: Demand and supply regression estimates using the sample separation. 
+ - `diseq_deterministic_adjustment`: Demand, supply, and price dynamics regression estimates using the whole sample. 
+ - `equilibrium_model`: Two stage least square estimates. 
+* Simplified simulation of prices and controls.
+
+# diseq 0.4.1
+
+* Cumulative update of CRAN version. 
+* Version 0.4 introduces user space changes.
+ - Model can be initialized using formulas
+ - Introduced functions for single call initialization and estimation of models. The old methods for constructing and estimating models are still exported.
+ - Introduced estimation output class `market_fit`. The class further unifies the user interface for accessing market models.
+ - Estimation output can be summarized by calling `summary` with `market_fit` objects.
+ - Added new plotting functionality on the estimation output.
+ - Added coefficient access method `coef`.
+ - Added variance-covariance access method `vcov`.
+ - Added `logLik` object access method.
+ - Added `formula` object access method.
+* Documentation changes.
+ - Examples and vignettes were adjusted to exemplify the new user interface.
+ - Documentation entry added for model initialization based on formulas.
+ - Added vignette `more_details.Rmd` with initialization and estimation details.
+
 # diseq 0.3.1.9005
 
 * Fixed equations (issue #24) in GitHub document.

@@ -113,11 +113,12 @@ The following two subsections describe the common initialization steps of all ma
 model classes.
 
 \subsection{Variable construction}{
-The constructor prepares the model's variables using the passed specifications. The
-specification variables are expected to be of type `language`. The right hand side
-specifications of the system are expected to follow the syntax of
-\code{\link[stats]{formula}}. The construction of the model's data uses the variables
-that are extracted by these specification. The demand variables are extracted by a
+The constructor prepares the model's variables using the passed
+specifications. The specification variables are expected to be of type
+\code{language}. The right hand side specifications of the system are
+expected to follow the syntax of \code{\link[stats]{formula}}. The
+construction of the model's data uses the variables extracted by these
+specification. The demand variables are extracted by a
 formula that uses the \code{quantity} on the left hand side and the
 \code{demand} on the right hand side of the formula. The supply
 variables are constructed by the \code{quantity} and the
@@ -156,7 +157,8 @@ differences is created.
 }
 \section{Functions}{
 \itemize{
-\item \code{initialize,diseq_basic-method}: Basic disequilibrium model base constructor
+\item \code{initialize,diseq_basic-method}: Basic disequilibrium model base
+constructor
 
 \item \code{initialize,diseq_deterministic_adjustment-method}: Disequilibrium model with deterministic price
 adjustment constructor
@@ -173,7 +175,7 @@ adjustment constructor
 simulated_data <- simulate_data(
   "diseq_basic", 500, 3, # model type, observed entities, observed time points
   -0.9, 8.9, c(0.3, -0.2), c(-0.03, -0.01), # demand coefficients
-  0.9, 4.2, c(0.03), c(-0.05, 0.02) # supply coefficients
+  0.9, 6.2, c(0.03), c(-0.05, 0.02) # supply coefficients
 )
 
 # initialize the model
@@ -231,7 +233,7 @@ simulated_data <- simulate_data(
   # demand coefficients
   -0.1, 9.8, c(0.3, -0.2), c(0.6, 0.1),
   # supply coefficients
-  0.1, 5.1, c(0.9), c(-0.5, 0.2),
+  0.1, 7.1, c(0.9), c(-0.5, 0.2),
   # price adjustment coefficient
   1.4, 3.1, c(0.8)
 )

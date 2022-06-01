@@ -211,12 +211,6 @@ setGeneric(
 setMethod(
   "simulate_quantities_and_prices", signature(object = "simulated_model"),
   function(object, demanded_quantities, supplied_quantities, prices, starting_prices) {
-    if (any(prices < 0)) {
-      print_error(
-        object@logger, "Simulation produced negative prices. ",
-        "Change either the parameterization of the model or the seed."
-      )
-    }
     if (any(demanded_quantities < 0)) {
       print_error(
         object@logger, "Simulation produced negative demanded quantities. ",
@@ -308,67 +302,19 @@ setClass(
 setMethod(
   "simulate_quantities_and_prices", signature(object = "simulated_directional_model"),
   function(object, demanded_quantities, supplied_quantities, prices, starting_prices) {
-    starting_prices <- object@price_generator(object@nobs)
-    r_d <- simulated_demanded_quantities(object, 0)
-    r_s <- simulated_supplied_quantities(object, 0)
+    prices <- object@price_generator((object@tobs + 1) * object@nobs)
+    spi <- seq(1, (object@tobs + 1) * object@nobs, object@tobs + 1)
+    starting_prices <- prices[spi]
+    price_differences <- c(NA, diff(prices))
+    prices <- prices[-spi]
 
-    demand_columns <- grep("Xd", names(object@simulation_tbl))
-    supply_columns <- grep("Xs", names(object@simulation_tbl))
+    demanded_quantities <- simulated_demanded_quantities(object, prices)
+    supplied_quantities <- simulated_supplied_quantities(object, prices)
 
-    prices <- c()
-    demanded_quantities <- c()
-    supplied_quantities <- c()
-    lagged_prices <- starting_prices
-    for (i in 1:object@nobs) {
-      i_offset <- (i - 1) * object@tobs
-      for (t in 1:object@tobs) {
-        count <- 0
-        repeat {
-          new_price <- object@price_generator(1)
-          new_demand <- new_price * object@alpha_d + r_d[i_offset + t]
-          new_supply <- r_s[i_offset + t]
-          price_difference <- new_price - lagged_prices[i]
-          shortage <- new_demand - new_supply
-          count <- count + 1
-          if (count > 1e+3) {
-            print_error(
-              object@logger,
-              "Simulation failed to produce valid data in the last", count,
-              " attempts. You can retry to simulate the model. ",
-              "If the problem insists, ",
-              "change either the parameterization of the model or the seed."
-            )
-          }
-          if (price_difference * shortage >= 0) {
-            break
-          }
-
-          object@simulation_tbl[i_offset + t, demand_columns] <- as.list(
-            object@control_generator(length(demand_columns))
-          )
-          object@simulation_tbl[i_offset + t, supply_columns] <- as.list(
-            object@control_generator(length(supply_columns))
-          )
-          object@simulation_tbl[i_offset + t, c("u_d", "u_s")] <- as.list(
-            MASS::mvrnorm(n = 1, object@mu, object@sigma)
-          )
-          r_d[i_offset + t] <- (
-            object@beta_d0 + demand_controls(object)[i_offset + t, ] %*% object@beta_d +
-              common_controls(object)[i_offset + t, ] %*% object@eta_d +
-              object@simulation_tbl$u_d[i_offset + t]
-          )
-          r_s[i_offset + t] <- (
-            object@beta_s0 + supply_controls(object)[i_offset + t, ] %*% object@beta_s +
-              common_controls(object)[i_offset + t, ] %*% object@eta_s +
-              object@simulation_tbl$u_s[i_offset + t]
-          )
-        }
-        prices <- append(prices, new_price)
-        demanded_quantities <- append(demanded_quantities, new_demand)
-        supplied_quantities <- append(supplied_quantities, new_supply)
-        lagged_prices[i] <- new_price
-      }
-    }
+    const <- sqrt(.Machine$double.eps)
+    xdi <- price_differences[-spi] >= 0
+    demanded_quantities[xdi] <- supplied_quantities[xdi] + const
+    supplied_quantities[!xdi] <- demanded_quantities[!xdi] + const
 
     callNextMethod(
       object, demanded_quantities, supplied_quantities, prices,
@@ -394,7 +340,7 @@ setMethod(
     r_s <- simulated_supplied_quantities(object, 0)
     dr <- r_d - r_s
 
-    if (class(object) == "simulated_stochastic_adjustment_model") {
+    if (is(object, "simulated_stochastic_adjustment_model")) {
       dr <- dr + object@gamma * (
         object@beta_p0 + price_controls(object) %*% object@beta_p +
           object@simulation_tbl$u_p
@@ -610,8 +556,8 @@ setGeneric(
            sigma_d = 1.0, sigma_s = 1.0, sigma_p = 1.0,
            rho_ds = 0.0, rho_dp = 0.0, rho_sp = 0.0,
            seed = NA_integer_,
-           price_generator = function(n) stats::rnorm(n = n, mean = 2.5, sd = 0.5),
-           control_generator = function(n) stats::rnorm(n = n, mean = 2.5, sd = 0.5),
+           price_generator = function(n) stats::rnorm(n = n),
+           control_generator = function(n) stats::rnorm(n = n),
            verbose = 0) {
     standardGeneric("simulate_data")
   }
@@ -711,6 +657,12 @@ setMethod(
           "The share of observations in excess demand is ", xd_share, "."
         )
       }
+
+      print_info(
+        sim_mdl@logger,
+        "Model simulated with ", xd_share, "% excess demand and ",
+        1 - xd_share, "% excess supply observations' shares."
+      )
     }
 
     sim_mdl@simulation_tbl
@@ -753,8 +705,10 @@ setMethod(
       verbose = verbose
     ))
 
+    quantity <- "Q"
+    price <- "P"
     demand <- paste(
-      "P",
+      price,
       paste("Xd", seq_along(simulation_parameters$beta_d),
         sep = "", collapse = " + "
       ),
@@ -770,31 +724,36 @@ setMethod(
       sep = " + "
     )
     if (model_type_string != "diseq_directional") {
-      supply <- paste0("P", " + ", supply)
+      supply <- paste0(price, " + ", supply)
     }
     supply <- str2lang(supply)
     price_dynamics <- paste("Xp",
       seq_along(simulation_parameters$beta_p),
       sep = "", collapse = " + "
     )
+    # Use this avoid cran-check complains about undefined global variables
     price_dynamics <- str2lang(price_dynamics)
+    quantity <- str2lang(quantity)
+    price <- str2lang(price)
+    subject <- str2lang("id")
+    time <- str2lang("date")
 
     if (model_type_string %in% c("equilibrium_model", "diseq_basic")) {
       model <- new(
         model_type_string,
-        subject = id, time = date,
-        quantity = Q, price = P,
+        subject = subject, time = time,
+        quantity = quantity, price = price,
         demand = demand, supply = supply,
         data = sdt, verbose = verbose, ...
       )
     } else if (model_type_string %in% c(
       "diseq_directional",
       "diseq_deterministic_adjustment"
-      )) {
+    )) {
       model <- new(
         model_type_string,
-        subject = id, time = date,
-        quantity = Q, price = P,
+        subject = subject, time = time,
+        quantity = quantity, price = price,
         demand = demand,
         supply = supply,
         data = sdt, verbose = verbose, ...
@@ -802,8 +761,8 @@ setMethod(
     } else if (model_type_string %in% c("diseq_stochastic_adjustment")) {
       model <- new(
         model_type_string,
-        subject = id, time = date,
-        quantity = Q, price = P,
+        subject = subject, time = time,
+        quantity = quantity, price = price,
         demand = demand, supply = supply,
         price_dynamics = price_dynamics,
         data = sdt, verbose = verbose, ...

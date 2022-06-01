@@ -6,10 +6,11 @@
 #' \subsection{diseq_directional}{
 #' The directional disequilibrium model consists of three equations and a
 #' separation rule. The market is described by a linear demand, a linear supply
-#' equation and the short side rule. The separation rule splits the sample into regimes
-#' of excess supply and excess demand. If a price change is positive at the time point
-#' of the observation, then the observation is classified as being in an excess demand
-#' regime. Otherwise, it is assumed that it represents an excess supply state. The
+#' equation and the short side rule. The separation rule splits the sample
+#' into states of excess supply and excess demand. If a price change is
+#' positive at the time point of the observation, then the observation is
+#' classified as being in an excess demand state. Otherwise, it is assumed
+#' that it represents an excess supply state. The
 #' model is estimated using full information maximum likelihood.
 #'
 #' \deqn{D_{nt} = X_{d,nt}'\beta_{d} + u_{d,nt},}
@@ -62,8 +63,8 @@ setMethod(
     # Check for mis-specification
     price_column <- all.vars(formula(specification, lhs = 2, rhs = 0))
     if (
-      price_column %in% colnames(.Object@system@demand@independent_matrix) &&
-        price_column %in% colnames(.Object@system@supply@independent_matrix)
+      price_column %in% independent_variables(.Object@system@demand) &&
+        price_column %in% independent_variables(.Object@system@supply)
     ) {
       print_error(
         .Object@logger,
@@ -76,10 +77,33 @@ setMethod(
       .Object@logger,
       "Sample separated with ", sum(.Object@system@demand@separation_subset),
       " rows in excess supply and ",
-      sum(.Object@system@supply@separation_subset), " in excess demand regime."
+      sum(.Object@system@supply@separation_subset), " in excess demand state."
     )
 
     .Object
+  }
+)
+
+#' @describeIn single_call_estimation Directional disequilibrium model.
+#' @export
+setGeneric(
+  "diseq_directional",
+  function(specification, data,
+           correlated_shocks = TRUE, verbose = 0,
+           estimation_options = list()) {
+    standardGeneric("diseq_directional")
+  }
+)
+
+#' @rdname single_call_estimation
+setMethod(
+  "diseq_directional", signature(specification = "formula"),
+  function(specification, data, correlated_shocks, verbose,
+           estimation_options) {
+    initialize_from_formula(
+      "diseq_directional", specification, data, correlated_shocks, verbose,
+      estimation_options
+    )
   }
 )
 
@@ -116,5 +140,43 @@ setMethod(
   function(object, parameters) {
     object@system <- set_parameters(object@system, parameters)
     -calculate_system_scores(object@system)
+  }
+)
+
+setMethod(
+  "calculate_initializing_values", signature(object = "diseq_directional"),
+  function(object) {
+    demand <- stats::lm(
+      object@system@demand@dependent_vector ~
+      object@system@demand@independent_matrix - 1,
+      subset = object@system@demand@separation_subset
+    )
+    names(demand$coefficients) <- colnames(
+      object@system@demand@independent_matrix
+    )
+    var_d <- var(demand$residuals)
+    names(var_d) <- prefixed_variance_variable(object@system@demand)
+
+    supply <- stats::lm(
+      object@system@supply@dependent_vector ~
+      object@system@supply@independent_matrix - 1,
+      subset = object@system@supply@separation_subset
+    )
+    names(supply$coefficients) <- colnames(
+      object@system@supply@independent_matrix
+    )
+    var_s <- var(supply$residuals)
+    names(var_s) <- prefixed_variance_variable(object@system@supply)
+
+    start <- c(demand$coefficients, supply$coefficients, var_d, var_s)
+
+    if (object@system@correlated_shocks) {
+      rho <- 0.0
+      names(rho) <- correlation_variable(object@system)
+
+      start <- c(start, rho)
+    }
+
+    start
   }
 )
